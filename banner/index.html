@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="ad.size" content="width=900,height=120">
+<title>Geely Atlas Premium Scroller Bar</title>
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
+#banner { position: absolute; bottom: 0; left: 50%; width: 900px; height: 120px; overflow: hidden; isolation: isolate; transform-origin: center bottom; }
+#banner img { display: block; user-select: none; -webkit-user-drag: none; }
+#cityTrack, #utpMask, #carGroup, #logo, #button, .disc { position: absolute; }
+#cityTrack { top: 0; left: 0; display: flex; width: 2700px; height: 120px; will-change: transform; }
+.city { width: 900px; height: 120px; flex: none; }
+.city:nth-child(2) { transform: scaleX(-1); }
+#utpMask { left: 199px; top: 29px; width: 179px; height: 75px; clip-path: inset(0 100% 0 0); z-index: 2; }
+#utpMask img { width: 100%; height: 100%; }
+#logo { left: 43px; top: 29px; width: 112px; height: 16px; z-index: 4; }
+#carGroup { left: 0; top: 21px; width: 230.788px; height: 92.878px; z-index: 5; will-change: transform; }
+#car { width: 100%; height: 100%; }
+.disc { width: 11.7%; height: auto; transform-origin: center; will-change: transform; pointer-events: none; }
+#rearDisc { left: 13.04%; top: 59.12%; }
+#frontDisc { left: 71.63%; top: 59.25%; }
+#button { left: 710px; top: 51px; width: 120px; height: 24px; border: 0; border-radius: 3px; background: white; display: flex; align-items: center; justify-content: center; z-index: 6; cursor: pointer; }
+#button {
+  transition: background-color 260ms ease, box-shadow 260ms ease;
+}
+.button-label {
+  position: relative;
+  display: block;
+  width: 83%;
+  aspect-ratio: 100 / 12;
+}
+#button .button-label img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transition: filter 260ms ease, transform 320ms cubic-bezier(.2,.75,.25,1);
+  pointer-events: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  #button:hover {
+    background-color: #080808;
+    box-shadow: 0 3px 12px rgba(0,0,0,.18);
+  }
+  #button:hover img { filter: invert(1); }
+  #button:hover .button-arrow { transform: translateX(3px); }
+}
+#button:focus-visible, #button:active { background-color: #080808; }
+#button:focus-visible img, #button:active img { filter: invert(1); }
+#button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+html[data-format="mobile"] #button:hover .button-arrow { transform: translateX(1px); }
+@media (prefers-reduced-motion: reduce) {
+  #button, #button .button-label img { transition: none; }
+}
+/* Бесконечный фон: отдельная высота и градиент для каждого формата.
+   Силуэт города остается только внутри анимированного баннера. */
+body::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--ground-height, 100px);
+  pointer-events: none;
+}
+html[data-format="desktop"] body::before {
+  background: linear-gradient(to bottom,
+    #89A1AA 0%, #7A949E 22%,
+    #7A949E 65%, #59737F 65%, #3C5764 100%);
+}
+html[data-format="mobile"] body::before {
+  background: linear-gradient(to bottom,
+    #869FA8 0%, #7A949E 18.75%,
+    #7A949E 63.541667%, #59737F 63.541667%, #3C5764 100%);
+}
+/* Мобильная адаптация того же креатива. */
+html[data-format="mobile"] #banner { width: 300px; height: 100px; }
+html[data-format="mobile"] #cityTrack { width: 2250px; height: 100px; }
+html[data-format="mobile"] .city { width: 750px; height: 100px; }
+html[data-format="mobile"] #utpMask { left: 12px; top: 26px; width: 107px; height: 45px; }
+html[data-format="mobile"] #logo { left: 12px; top: 86px; width: 68px; height: auto; }
+html[data-format="mobile"] #carGroup { top: 17px; width: 147px; height: 57.4px; }
+html[data-format="mobile"] #button { left: 231px; top: 83px; width: 60px; height: 12px; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div id="banner">
+  <div id="cityTrack" aria-hidden="true">
+    <img class="city" src="images/city_bg.svg" alt="">
+    <img class="city" src="images/city_bg.svg" alt="">
+    <img class="city" src="images/city_bg.svg" alt="">
+  </div>
+  <div id="utpMask"><img src="images/utp.svg" alt="Geely Atlas. Эстетика прогресса"></div>
+  <img id="logo" src="images/geely_logo.svg" alt="Geely">
+  <div id="carGroup" aria-hidden="true">
+    <img id="car" src="images/car.png" alt="">
+    <img class="disc" id="rearDisc" src="images/disc.png" alt="">
+    <img class="disc" id="frontDisc" src="images/disc.png" alt="">
+  </div>
+  <button id="button" type="button" aria-label="Смотреть"><span class="button-label" aria-hidden="true"><img src="images/but_text.svg" alt=""><img class="button-arrow" src="images/but_arrow.svg" alt=""></span></button>
+</div>
+<script src="gsap.min.js"></script>
+<script>
+(() => {
+  // Общая механика для desktop и mobile. Прогресс сохраняется при resize.
+  const desktop = { width: 900, height: 120, groundHeight: 100, startX: 184, endX: 436, revealLeft: 199, revealWidth: 179, revealOffset: 12, tile: 900, cityFactor: 0.035, wheelFactor: 0.38 };
+  const mobile = { width: 300, height: 100, groundHeight: 80, startX: 0, endX: 142, revealLeft: 12, revealWidth: 107, revealOffset: 10, tile: 750, cityFactor: 0.022, wheelFactor: 0.34 };
+  const media = matchMedia('(max-width: 767px)');
+  const requested = new URLSearchParams(location.search).get('view');
+  function getFormat() {
+    return requested === 'desktop' || requested === 'mobile'
+      ? requested : (media.matches ? 'mobile' : 'desktop');
+  }
+  const banner = document.getElementById('banner');
+  const cityTrack = document.getElementById('cityTrack');
+  const carGroup = document.getElementById('carGroup');
+  const utpMask = document.getElementById('utpMask');
+  const discs = [document.getElementById('rearDisc'), document.getElementById('frontDisc')];
+  const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+  let config = getFormat() === 'mobile' ? mobile : desktop;
+  // Все параметры движения в одном месте, время в секундах.
+  const motion = {
+    scrollDistance: 720,
+    carDuration: 0.85,
+    acceleration: 0.36,
+    braking: 1.25,
+    idleDelay: 0.16,
+    maxSpeed: 140,
+    minSpeed: 28
+  };
+  const state = { progress: 0, velocity: 0 };
+  let target = 0, cityPhase = 0, angle = 0;
+  let touchY = null, lastInput = -Infinity, inputSpeed = 0;
+  let engine = null, raf = 0, lastTime = 0;
+  let carTween = null, speedTween = null, stopTween = null;
+  let fallbackCar = null, fallbackSpeed = null;
+  let speedTarget = 0, ticking = false;
+
+  function render() {
+    const x = config.startX + (config.endX - config.startX) * state.progress;
+    const reveal = clamp((x - config.revealLeft + config.revealOffset) / config.revealWidth, 0, 1);
+    carGroup.style.transform = `translate3d(${x}px,0,0)`;
+    utpMask.style.clipPath = `inset(0 ${100 * (1 - reveal)}% 0 0)`;
+    cityTrack.style.transform = `translate3d(${-cityPhase * config.tile}px,0,0)`;
+    discs.forEach(disc => { disc.style.transform = `rotate(${angle}deg)`; });
+  }
+
+  function layout() {
+    const format = getFormat();
+    document.documentElement.dataset.format = format;
+    config = format === 'mobile' ? mobile : desktop;
+    const scale = Math.min(1, innerWidth / config.width, innerHeight / config.height);
+    banner.style.transform = `translateX(-50%) scale(${scale})`;
+    document.documentElement.style.setProperty('--ground-height', `${config.groundHeight * scale}px`);
+    document.querySelector('meta[name="ad.size"]').content = `width=${config.width},height=${config.height}`;
+    render();
+  }
+
+  // GSAP отвечает за разгон, торможение и плавное движение к финальной точке.
+  // Ticker интегрирует скорость, поэтому фон и диски не прыгают при новых жестах.
+  function advance(dt) {
+    cityPhase = (cityPhase + state.velocity * config.cityFactor * dt / config.tile) % 2;
+    angle = (angle + state.velocity * config.wheelFactor * dt) % 360;
+    render();
+  }
+
+  function gsapTick(time, deltaTime) {
+    advance(clamp(deltaTime / 16.667, 0, 3));
+    if (!carTween && !speedTween && !stopTween && state.velocity === 0) {
+      engine.ticker.remove(gsapTick);
+      ticking = false;
+    }
+  }
+
+  function startTicker() {
+    if (!ticking) { ticking = true; engine.ticker.add(gsapTick); }
+  }
+
+  function animateCar() {
+    if (carTween) carTween.kill();
+    if (state.progress >= target) { carTween = null; return; }
+    carTween = engine.to(state, { progress: target, duration: motion.carDuration, ease: 'power3.out', overwrite: 'auto', onComplete: () => { carTween = null; } });
+  }
+
+  function animateSpeed(value) {
+    if (speedTween) speedTween.kill();
+    speedTarget = value;
+    speedTween = engine.to(state, { velocity: value, duration: value > state.velocity ? motion.acceleration : motion.braking, ease: value > state.velocity ? 'power2.out' : 'power2.out', overwrite: 'auto', onComplete: () => { speedTween = null; state.velocity = value; } });
+  }
+
+  function gsapInput() {
+    if (target > state.progress && (!carTween || carTween.vars.progress !== target)) animateCar();
+    if (speedTarget !== inputSpeed || !speedTween && state.velocity !== inputSpeed) animateSpeed(inputSpeed);
+    if (stopTween) stopTween.kill();
+    stopTween = engine.delayedCall(motion.idleDelay, () => { stopTween = null; animateSpeed(0); });
+    startTicker();
+  }
+
+  // Автономный резерв: если GSAP не загрузился, баннер работает на requestAnimationFrame.
+  function easeOut(t, power) { return 1 - Math.pow(1 - t, power); }
+  function makeTween(from, to, duration, now, power) { return { from, to, duration: duration * 1000, now, power }; }
+  function sample(tween, now) {
+    const t = clamp((now - tween.now) / tween.duration, 0, 1);
+    return { value: tween.from + (tween.to - tween.from) * easeOut(t, tween.power), done: t === 1 };
+  }
+  function fallbackTick(now) {
+    const dt = clamp((now - lastTime) / 16.667, 0, 3);
+    lastTime = now;
+    if (fallbackCar) {
+      const result = sample(fallbackCar, now);
+      state.progress = result.value;
+      if (result.done) fallbackCar = null;
+    }
+    if (fallbackSpeed) {
+      const result = sample(fallbackSpeed, now);
+      state.velocity = result.value;
+      if (result.done) fallbackSpeed = null;
+    }
+    if (now - lastInput >= motion.idleDelay * 1000 && speedTarget !== 0) {
+      speedTarget = 0;
+      fallbackSpeed = makeTween(state.velocity, 0, motion.braking, now, 3);
+    }
+    advance(dt);
+    raf = fallbackCar || fallbackSpeed || speedTarget ? requestAnimationFrame(fallbackTick) : 0;
+  }
+
+  function applyInput(delta) {
+    const power = clamp(Math.abs(Number(delta) || 0), 0, 120);
+    if (!power) return;
+    const previousTarget = target;
+    target = Math.min(1, target + power / motion.scrollDistance);
+    const now = performance.now();
+    inputSpeed = Math.min(motion.maxSpeed, Math.max(motion.minSpeed, power * 1.1, now - lastInput < 160 ? inputSpeed * 0.85 : 0));
+    lastInput = now;
+    if (engine) {
+      gsapInput();
+    } else {
+      if (previousTarget !== target) fallbackCar = makeTween(state.progress, target, motion.carDuration, now, 4);
+      if (speedTarget !== inputSpeed) {
+        speedTarget = inputSpeed;
+        fallbackSpeed = makeTween(state.velocity, speedTarget, speedTarget > state.velocity ? motion.acceleration : motion.braking, now, 3);
+      }
+      if (!raf) { lastTime = now; raf = requestAnimationFrame(fallbackTick); }
+    }
+  }
+
+  // Подключение локального GSAP 3.12.2.
+  function activateGSAP() {
+    if (engine || !window.gsap) return;
+    engine = window.gsap;
+    document.documentElement.dataset.motionEngine = 'gsap';
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    fallbackCar = fallbackSpeed = null;
+    animateCar();
+    const remaining = motion.idleDelay - (performance.now() - lastInput) / 1000;
+    if (remaining > 0) {
+      animateSpeed(inputSpeed);
+      stopTween = engine.delayedCall(remaining, () => { stopTween = null; animateSpeed(0); });
+    } else if (state.velocity > 0) animateSpeed(0);
+    if (carTween || speedTween || stopTween) startTicker();
+  }
+
+  function wheelPixels(event) {
+    return event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1);
+  }
+  function inputHere(delta) {
+    applyInput(delta);
+    if (parent !== window) parent.postMessage({ type: 'GEELY_AD_SCROLL', delta }, '*');
+  }
+  window.addEventListener('wheel', event => {
+    if (event.ctrlKey) return;
+    if (parent !== window && event.cancelable) event.preventDefault();
+    inputHere(wheelPixels(event));
+  }, { passive: false });
+  window.addEventListener('touchstart', event => { touchY = event.touches.length === 1 ? event.touches[0].clientY : null; }, { passive: true });
+  window.addEventListener('touchmove', event => {
+    if (touchY === null || event.touches.length !== 1) return;
+    const y = event.touches[0].clientY;
+    if (parent !== window && event.cancelable) event.preventDefault();
+    inputHere(touchY - y); touchY = y;
+  }, { passive: false });
+  for (const event of ['touchend', 'touchcancel']) window.addEventListener(event, () => { touchY = null; }, { passive: true });
+  window.addEventListener('message', event => {
+    if (event.source === parent && event.data?.type === 'SCROLLER_ACTIVITY') applyInput(event.data.delta);
+  });
+  window.addEventListener('resize', layout);
+  layout();
+  document.documentElement.dataset.motionEngine = 'native';
+  if (window.gsap) activateGSAP();
+})();
+</script>
+</body>
+</html>

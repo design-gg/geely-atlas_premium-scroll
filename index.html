@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Geely Atlas Premium Scroller Bar - Demo</title>
+  <script>
+    // Ссылки ведут на одну страницу с разными режимами предпросмотра.
+    const params = new URLSearchParams(location.search);
+    const requestedView = params.get('view');
+    if (params.get('embedded') === '1') document.documentElement.dataset.embedded = 'true';
+    document.documentElement.dataset.view = ['desktop', 'mobile'].includes(requestedView) ? requestedView : 'auto';
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    html { scroll-behavior: auto; }
+    body {
+      margin: 0;
+      color: #21303e;
+      background: linear-gradient(180deg, #eef2f5 0%, #f8fafb 42%, #eef3f6 100%);
+      font: 17px/1.72 Arial, Helvetica, sans-serif;
+    }
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 40;
+      backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.82);
+      border-bottom: 1px solid rgba(19, 38, 54, 0.08);
+      padding: 10px 20px;
+    }
+    body { padding-top: var(--toolbar-height, 86px); }
+    .head-inner {
+      width: min(1040px, calc(100% - 20px));
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+    .article {
+      width: min(900px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 56px 0 280px;
+    }
+    .eyebrow {
+      color: #718393;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .18em;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+    h1 {
+      margin: 0 0 20px;
+      font-size: clamp(34px, 5vw, 60px);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+    h2 { margin: 34px 0 12px; font-size: 30px; line-height: 1.16; }
+    p { margin: 0 0 18px; color: #4c5b67; }
+    .data-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin: 28px 0 32px;
+    }
+    .stat {
+      background: rgba(255,255,255,.8);
+      border: 1px solid rgba(28, 44, 57, .08);
+      border-radius: 18px;
+      padding: 18px 20px;
+      box-shadow: 0 18px 40px rgba(23, 39, 53, .06);
+    }
+    .stat strong { display: block; margin-bottom: 7px; font-size: 28px; color: #223a4f; }
+    .text-block {
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(28, 44, 57, .08);
+      border-radius: 22px;
+      padding: 22px 24px;
+      margin: 24px 0;
+      box-shadow: 0 22px 44px rgba(23, 39, 53, .05);
+    }
+    .quote {
+      padding-left: 22px;
+      border-left: 4px solid rgba(69, 99, 122, .35);
+      color: #33495a;
+      font-size: 20px;
+      line-height: 1.5;
+      margin: 24px 0 28px;
+    }
+    /* Переключатель формата в начале демо. */
+    .preview-panel {
+      width: min(900px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      background: #fff;
+      border: 1px solid #dbe3e8;
+      border-radius: 12px;
+    }
+    .preview-caption { font-size: 14px; line-height: 1.45; font-weight: 700; color: #263b4a; }
+    .preview-caption small { display: block; margin-top: 4px; color: #687985; font-size: 12px; font-weight: 400; }
+    .preview-links { display: flex; align-items: center; gap: 8px; }
+    .device-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border: 1px solid #dce4e9;
+      border-radius: 7px;
+      color: #354d5e;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.2;
+      transition: background .18s, border-color .18s, color .18s;
+    }
+    .device-link svg { width: 26px; height: 26px; flex: none; }
+    .device-link small { display: block; font-size: 11px; margin-top: 4px; font-weight: 400; opacity: .8; }
+    .device-link:hover { border-color: #8098a5; background: #edf2f5; }
+    .device-link[aria-current="true"] { background: #314c5b; border-color: #314c5b; color: #fff; }
+    .auto-link { font-size: 12px; color: #607987; padding: 8px; text-decoration: underline; }
+    .demo-banner {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      transform: translateX(-50%);
+      width: 100%;
+      height: 120px;
+      z-index: 30;
+      border: 0;
+      background: transparent;
+    }
+    html[data-view="mobile"] .demo-banner { width: 100%; height: 100px; }
+    html[data-view="mobile"] .article { max-width: 430px; padding-bottom: 160px; }
+    html[data-view="mobile"] .data-strip { grid-template-columns: 1fr; }
+    html[data-view="mobile"] h1 { font-size: clamp(32px, 6vw, 44px); }
+    footer {
+      text-align: center;
+      padding: 0 20px 36px;
+      color: #81909b;
+      font-size: 13px;
+    }
+    @media (max-width: 767px) {
+      html[data-view="auto"] .demo-banner { width: 100%; height: 100px; }
+      .article { padding-bottom: 160px; }
+      .preview-panel { flex-wrap: wrap; padding: 14px; gap: 12px; }
+      .preview-links { flex-wrap: wrap; gap: 6px; }
+      .device-link { padding: 9px; gap: 7px; }
+      .device-link svg { width: 22px; height: 22px; }
+    }
+    @media (max-width: 740px) {
+      .data-strip { grid-template-columns: 1fr; }
+      .article { padding-top: 40px; }
+      header { padding: 8px; }
+      .preview-panel { width: 100%; }
+    }
+
+    /* Mobile preview: independent viewport with native scrolling. */
+    .phone-stage { display: none; }
+    html[data-simulator="true"], html[data-simulator="true"] body {
+      height: 100%;
+      overflow: hidden;
+    }
+    html[data-simulator="true"] body {
+      background: radial-gradient(ellipse at 50% 35%, #f8fafb, #d9e1e6);
+    }
+    html[data-simulator="true"] #editorial,
+    html[data-simulator="true"] #geelyBanner { display: none; }
+    html[data-simulator="true"] .phone-stage {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: calc(100dvh - var(--toolbar-height, 86px));
+      padding: 14px 12px;
+    }
+    .phone-shell {
+      width: 410px;
+      max-width: 100%;
+      height: min(850px, 100%);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #50555a;
+      border-radius: 40px;
+      background: #202428;
+      box-shadow: 0 20px 65px #16273635, 0 0 0 3px #b4bec5;
+    }
+    .phone-top {
+      position: relative;
+      flex: 0 0 28px;
+      background: #f8fafb;
+      border-radius: 31px 31px 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .phone-camera {
+      width: 80px;
+      height: 19px;
+      background: #202428;
+      border-radius: 20px;
+    }
+    .phone-screen {
+      flex: 1 1 0;
+      min-height: 0;
+      width: 100%;
+      border: 0;
+      display: block;
+      background: #eef2f5;
+    }
+    .phone-bottom {
+      flex: 0 0 20px;
+      display: grid;
+      place-items: center;
+      background: #f8fafb;
+      border-radius: 0 0 31px 31px;
+    }
+    .phone-home { width: 105px; height: 4px; border-radius: 4px; background: #202428; }
+    html[data-embedded="true"] body { padding-top: 0; }
+    html[data-embedded="true"] header { display: none; }
+    html[data-embedded="true"] .article { width: calc(100% - 32px); padding-top: 30px; }
+    html[data-embedded="true"] .article h1 { font-size: 32px; }
+    html[data-embedded="true"] .article h2 { font-size: 24px; }
+    html[data-embedded="true"] body { font-size: 15px; }
+    html[data-embedded="true"] footer { padding-bottom: 120px; }
+  </style>
+</head>
+<body>
+  <header id="toolbar">
+    <section class="preview-panel" aria-label="Версии рекламного формата">
+      <div class="preview-caption">Premium Scroller Bar
+        <small>Выберите устройство для просмотра демо</small>
+      </div>
+      <nav class="preview-links" aria-label="Переключение формата">
+        <a class="device-link" data-device="desktop" href="?view=desktop">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4" width="27" height="19" rx="2"/><path d="M16 23v5M10 28h12"/></svg>
+          <span>Desktop<small>900 × 120</small></span>
+        </a>
+        <a class="device-link" data-device="mobile" href="?view=mobile">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="2.5" width="16" height="27" rx="3"/><path d="M14 6h4M14 26h4"/></svg>
+          <span>Mobile<small>300 × 100</small></span>
+        </a>
+        <a class="auto-link" href="?view=auto" title="Автоматически по ширине окна">Авто</a>
+      </nav>
+    </section>
+  </header>
+
+  <div class="phone-stage" aria-label="Предпросмотр на смартфоне">
+    <div class="phone-shell">
+      <div class="phone-top" aria-hidden="true"><div class="phone-camera"></div></div>
+      <iframe class="phone-screen" id="phoneScreen" title="Мобильная демо-страница"></iframe>
+      <div class="phone-bottom" aria-hidden="true"><div class="phone-home"></div></div>
+    </div>
+  </div>
+
+  <div id="editorial">
+  <main>
+    <article class="article">
+      <div class="eyebrow">Редакционный материал</div>
+      <h1>Новый взгляд на городской ритм: как кроссовер становится частью цифровой истории</h1>
+      <p>Эта демо-страница показывает работу формата Premium Scroller в более насыщенном редакционном окружении. Внизу окна закреплен баннер Geely Atlas. Он остается в поле зрения пользователя и реагирует на прокрутку страницы плавной анимацией.</p>
+      <p>Задача этой версии - продемонстрировать не разовое событие, а непрерывное взаимодействие. Пока пользователь читает материал и продолжает крутить колесо мыши, баннер живет вместе с контентом. Сначала автомобиль открывает текст, затем останавливается, а фон и диски продолжают поддерживать ощущение движения.</p>
+
+      <div class="data-strip">
+        <div class="stat"><strong>900 × 120</strong>Desktop-версия баннера фиксируется по нижнему краю экрана и не перекрывает весь контент.</div>
+        <div class="stat"><strong>Движение вперед</strong>Сценарий идет только вперед. Любая прокрутка - вниз или вверх - продолжает историю без отката.</div>
+        <div class="stat"><strong>Инерция</strong>После жеста скролла фон и колеса плавно замедляются, создавая мягкий премиальный отклик.</div>
+      </div>
+
+      <h2>Контент до рекламного формата</h2>
+      <p>На реальном сайте перед рекламным размещением обычно идет основной информационный блок: лид, несколько абзацев, подзаголовки, аналитика, цитаты и справочные фрагменты. Поэтому эта страница сделана длиннее и текстово богаче, чем в прошлой версии. Она имитирует обычную редакционную подачу и дает достаточно времени, чтобы прочувствовать поведение формата.</p>
+      <p>Важный принцип демонстрации - не перегружать страницу крупными иллюстрациями. Здесь визуальных блоков меньше, а текстовых больше. Это позволяет баннеру оставаться заметным, но не спорить с макетом страницы.</p>
+
+      <div class="text-block">
+        <p>Современный городской кроссовер уже давно воспринимается не только как средство передвижения, но и как пространство комфорта, технологий и визуального статуса. В цифровой коммуникации это означает, что само появление автомобиля в рекламном блоке должно работать не как статичная картинка, а как маленькая история о движении вперед.</p>
+        <p>Именно поэтому для этого формата выбран сценарий с поступательным движением. Автомобиль не откатывается назад. Он один раз уверенно проходит по баннеру, открывая ключевое сообщение, а затем остается в финальной позиции, поддерживая ощущение завершенного действия.</p>
+      </div>
+
+      <h2>Почему интерактив важен</h2>
+      <p>Пользователь сайта сегодня взаимодействует с десятками экранных элементов за несколько минут. Формат, который реагирует на его действие, получает дополнительную глубину восприятия. Скролл здесь не просто навигация по странице - он становится триггером для микроанимации и вовлечения.</p>
+      <p>Но при этом важно не перегнуть: отклик должен быть плавным, сдержанным и премиальным. Резкие скачки, избыточная динамика или навязчивое мигание в таком сценарии только мешают. Поэтому для Geely Atlas выбрана мягкая инерция, прозрачный фон и минималистичный город как среда движения.</p>
+
+      <div class="quote">Пока пользователь читает материал и продолжает крутить колесо мыши, баннер не «застывает». Даже после полной остановки автомобиля городской фон и колеса остаются в живой связке со скроллом.</div>
+
+      <h2>Средняя часть статьи</h2>
+      <p>Представьте длинный обзор рынка, аналитическую колонку или спецпроект. У пользователя нет задачи специально взаимодействовать с рекламой - он просто листает страницу. Поэтому на демо важна правдоподобность поведения. Формат должен работать естественно и не мешать чтению.</p>
+      <p>На этой странице оставлено дополнительное пространство по высоте, а нижний паддинг увеличен, чтобы закрепленный баннер визуально не спорил с текстом и чтобы продолжительный скролл успевал показать всю механику раскрытия. Заодно это позволяет убедиться, что даже в нижней части документа инерционный отклик сохраняется.</p>
+      <p>При желании сценарий можно развивать дальше: добавлять блик по кузову, анимацию CTA или отдельные спецэффекты после раскрытия текста. Но текущая версия сосредоточена на трех главных вещах - маска автомобиля, непрерывное движение вперед и оживление после финала.</p>
+
+      <div class="text-block">
+        <p><strong>Что именно реализовано в этом прототипе:</strong></p>
+        <p>- текст открывается из-за автомобиля по мере его движения вправо;</p>
+        <p>- движение прогресса не зависит от направления скролла;</p>
+        <p>- после полной остановки автомобиля дополнительные жесты скролла продолжают вращать диски и смещать городской фон;</p>
+        <p>- фон под рваными краями не залит сплошной серой подложкой;</p>
+        <p>- баннер автоматически адаптируется под desktop и mobile.</p>
+      </div>
+
+      <h2>Еще немного контента</h2>
+      <p>Длинный текстовый массив на демо полезен еще и потому, что на нем легче оценить навязчивость формата. Если пользователь продолжает чтение и баннер не раздражает, значит ритм и амплитуда подобраны удачно. Для автомобильной рекламы особенно важно сохранить ощущение качества и визуальной собранности.</p>
+      <p>Фон на странице намеренно сделан вариативным, но неброским: полупрозрачные карточки, спокойные градиенты, четкая типографика. Это создает контекст, в котором нижний рекламный модуль остается героем, но не выбивается из общей редакционной логики.</p>
+      <p>Прокрутите страницу еще немного. Даже когда текст статьи закончится и страница окажется в нижней точке, вы сможете продолжить вращать колесо мыши. Баннер внизу останется отзывчивым и покажет, что скролл все еще влияет на колеса и фон.</p>
+
+      <h2>Финальный блок материала</h2>
+      <p>В реальной интеграции здесь могли бы быть выводы, дополнительные факты, связанные материалы или блок комментариев. Для демо достаточно сохранить типичную структуру длинной статьи и дать формату проявить себя в естественном окружении.</p>
+      <p>Если захочешь, следующей итерацией можно доработать точную мобильную композицию, более агрессивную или наоборот более деликатную скорость инерции, а также привязать кнопку к нужной ссылке.</p>
+    </article>
+  </main>
+
+  <iframe class="demo-banner" id="geelyBanner" title="Geely Atlas Premium Scroller Bar"></iframe>
+  <footer>Geely Atlas Premium Scroller Bar · адаптивная демо-страница</footer>
+  </div>
+
+  <script>
+    (() => {
+      const frame = document.getElementById('geelyBanner');
+      const phone = document.getElementById('phoneScreen');
+      const toolbar = document.getElementById('toolbar');
+      const root = document.documentElement;
+      const view = root.dataset.view;
+      const embedded = root.dataset.embedded === 'true';
+      const narrow = matchMedia('(max-width: 767px)');
+      let simulated = false;
+
+      function measureToolbar() {
+        root.style.setProperty('--toolbar-height', `${embedded ? 0 : toolbar.getBoundingClientRect().height}px`);
+      }
+      function updatePreview() {
+        // On desktop, mobile mode is a true 390px-wide iframe viewport.
+        // On a real mobile screen, use the entire native viewport instead.
+        simulated = !embedded && view === 'mobile' && !narrow.matches;
+        root.dataset.simulator = String(simulated);
+        if (simulated) {
+          if (!phone.hasAttribute('src')) phone.src = './index.html?view=mobile&embedded=1';
+        } else if (!frame.hasAttribute('src')) {
+          frame.src = './banner/index.html' + (view === 'auto' ? '' : '?view=' + view);
+        }
+        const active = view === 'auto' ? (narrow.matches ? 'mobile' : 'desktop') : view;
+        document.querySelectorAll('[data-device]').forEach(link => {
+          if (link.dataset.device === active) link.setAttribute('aria-current', 'true');
+          else link.removeAttribute('aria-current');
+        });
+        measureToolbar();
+      }
+      new ResizeObserver(measureToolbar).observe(toolbar);
+      narrow.addEventListener('change', updatePreview);
+      updatePreview();
+      let touchY = null;
+
+      function send(delta) {
+        if (!simulated) frame.contentWindow?.postMessage({ type: 'SCROLLER_ACTIVITY', delta: Math.abs(delta) }, '*');
+      }
+
+      window.addEventListener('wheel', (event) => {
+        if (!event.ctrlKey) send(event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1));
+      }, { passive: true });
+
+      window.addEventListener('touchstart', (event) => {
+        if (event.touches[0]) touchY = event.touches[0].clientY;
+      }, { passive: true });
+
+      window.addEventListener('touchmove', (event) => {
+        if (touchY === null || !event.touches[0]) return;
+        const nextY = event.touches[0].clientY;
+        send(nextY - touchY);
+        touchY = nextY;
+      }, { passive: true });
+
+      for (const event of ['touchend', 'touchcancel']) window.addEventListener(event, () => { touchY = null; }, { passive: true });
+      // Жест над iframe также прокручивает основную страницу.
+      window.addEventListener('message', event => {
+        if (simulated || event.source !== frame.contentWindow || event.data?.type !== 'GEELY_AD_SCROLL') return;
+        const delta = Number(event.data.delta);
+        if (Number.isFinite(delta)) window.scrollBy(0, delta);
+      });
+    })();
+  </script>
+</body>
+</html>
