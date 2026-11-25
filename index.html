@@ -353,32 +353,65 @@
       narrow.addEventListener('change', updatePreview);
       updatePreview();
       let touchY = null;
+      let lastTouch = -Infinity;
+      let lastDirectInput = -Infinity;
+      let lastFrameScroll = -Infinity;
+      let previousScrollY = window.scrollY;
+
+      function isMobileView() {
+        return view === 'mobile' || (view === 'auto' && narrow.matches);
+      }
 
       function send(delta) {
         if (!simulated) frame.contentWindow?.postMessage({ type: 'SCROLLER_ACTIVITY', delta: Math.abs(delta) }, '*');
       }
 
       window.addEventListener('wheel', (event) => {
-        if (!event.ctrlKey) send(event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1));
+        if (!event.ctrlKey) {
+          lastDirectInput = performance.now();
+          send(event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1));
+        }
       }, { passive: true });
 
       window.addEventListener('touchstart', (event) => {
-        if (event.touches[0]) touchY = event.touches[0].clientY;
+        touchY = event.touches.length === 1 ? event.touches[0].clientY : null;
+        if (touchY !== null) lastTouch = performance.now();
       }, { passive: true });
 
       window.addEventListener('touchmove', (event) => {
-        if (touchY === null || !event.touches[0]) return;
+        if (touchY === null || event.touches.length !== 1) return;
         const nextY = event.touches[0].clientY;
+        lastTouch = lastDirectInput = performance.now();
         send(nextY - touchY);
         touchY = nextY;
       }, { passive: true });
 
-      for (const event of ['touchend', 'touchcancel']) window.addEventListener(event, () => { touchY = null; }, { passive: true });
+      for (const event of ['touchend', 'touchcancel']) window.addEventListener(event, () => {
+        if (touchY !== null) lastTouch = performance.now();
+        touchY = null;
+      }, { passive: true });
+
+      // На реальном телефоне браузер может продолжать прокрутку после touchmove.
+      // Учитываем это движение, только если прямые события перестали приходить.
+      // На границе страницы по-прежнему работают сами touchmove.
+      window.addEventListener('scroll', () => {
+        const nextY = window.scrollY;
+        const delta = nextY - previousScrollY;
+        previousScrollY = nextY;
+        const now = performance.now();
+        if (!simulated && isMobileView() && now - lastTouch < 1000 &&
+            now - lastDirectInput > 90 && now - lastFrameScroll > 90 && delta) {
+          send(delta);
+        }
+      }, { passive: true });
       // Жест над iframe также прокручивает основную страницу.
       window.addEventListener('message', event => {
         if (simulated || event.source !== frame.contentWindow || event.data?.type !== 'GEELY_AD_SCROLL') return;
         const delta = Number(event.data.delta);
-        if (Number.isFinite(delta)) window.scrollBy(0, delta);
+        if (Number.isFinite(delta)) {
+          lastFrameScroll = performance.now();
+          window.scrollBy(0, delta);
+        }
       });
     })();
   </script>
